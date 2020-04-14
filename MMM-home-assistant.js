@@ -147,8 +147,8 @@ Module.register("MMM-home-assistant", {
 	},
 
 	appendDoors: function(floorplan) {
-		for (var item in this.config.portals) {
-			var config = this.config.portals[item];
+		for (var item in this.config.doors) {
+			var config = this.config.doors[item];
 			floorplan.appendChild(this.getDoorDiv(item, config));
 		}
 	},
