@@ -8,29 +8,25 @@ Module.register("MMM-home-assistant", {
         },
 		floorplan: {
 			/* store your image as 'floorplan.png' to avoid git repository changes. */
-			image: "floorplan-default.png", // located in subfolder 'images'
+			image: "floorplan-default.svg", // located in subfolder 'images'
 			width: 400, // image width
 			height: 333, // image height
 		},
 		light: {
-			image: "light.svg", // located in subfolder 'images'
             color: "#ffd400", // css format, i.e. color names or color codes
-			width: 15, // image width
-			height: 15, // image height
+            stroke: "#ffd400", // css format, i.e. color names or color codes
 		},
 		door: {
-            image: "door.svg", // located in subfolder 'images'
 			color: "#42a2dd", // css format, i.e. color names or color codes
-            width: 24, // image width
-			height: 24, // image height
+            stroke: "#42a2dd", // css format, i.e. color names or color codes
 		},
 		lights: {
-			/* list all lights to be shown. */
-			// light.kitchen: { left: 50, top: 50 },
+			/* list all lights element ids. */
+			// "light.kitchen": "svg-light-id",
 		},
 		doors: {
-			/* list all door contacts to be shown. */
-			// door.front: { left: 100, top: 20, width: 26, height: 35 },
+			/* list all door elements in the svg. */
+			// "door.front": "svg-door-id",
 		},
     },
 
@@ -79,14 +75,27 @@ Module.register("MMM-home-assistant", {
 
     getDom: function() {
 		var floorplan = document.createElement("div");
-		floorplan.style.cssText = "background-image:url(" + this.file("/images/" + this.config.floorplan.image) + ");"
+		floorplan.style.cssText = ""//"background-image:url(" + this.file("/images/" + this.config.floorplan.image) + ");"
 			+ "top:-" + this.config.floorplan.height + "px;width:" + this.config.floorplan.width + "px;height:" + this.config.floorplan.height + "px;";
 
-		this.appendDoors(floorplan);
-		this.appendLights(floorplan);
+        var obj = document.createElement("embed");
+        obj.id = "floorplan";
+        obj.type = "image/svg+xml";
+        obj.src = this.file("/images/" + this.config.floorplan.image);
+        floorplan.appendChild(obj);
 
         if (!this.config.draft) {
             this.updateAllStates();
+        } else {
+            var self = this;
+            setTimeout(function(){
+                for (l in self.config.lights) {
+                    self.updateState(l, "on");
+                }
+                for (d in self.config.doors) {
+                    self.updateState(d, "on");
+                }
+            }, 1000);
         }
 
         return floorplan;
@@ -115,56 +124,45 @@ Module.register("MMM-home-assistant", {
     },
 	updateState: function(item, state) {
         var visible = state == "on";
-    	this.setVisible("hass." + item, visible);
-	},
-	setVisible: function(id, value) {
-		var element = document.getElementById(id);
-		if (element != null) {
-			element.style.display = value ? "block" : "none";
-		}
-	},
+        var id;
+        var config;
 
-	appendLights: function(floorplan) {
-		for (var item in this.config.lights) {
-			var position = this.config.lights[item];
-			floorplan.appendChild(this.getLightDiv(item, position));
-		}
+        id = this.getLight(item);
+        if (id) {
+            config = this.config.light;
+        } else {
+            id = this.getDoor(item);
+            config = this.config.door;
+        }
+    	this.setVisible(id, config, visible);
 	},
-	getLightDiv: function(item, position) {
-		var style = "left:" + position.left + "px;top:" + position.top + "px;position:absolute;"
-			+ "height:" + this.config.light.height + "px;width:" + this.config.light.width + "px;"
-            + "-webkit-mask-image:url(" + this.file("/images/" + this.config.light.image) + ");-webkit-mask-size: cover;"
-            + "mask-image:url(" + this.file("/images/" + this.config.light.image) + ");mask-size: cover;"
-            + "background-color:" + this.config.light.color + ";";
-		if (!this.config.draft) {
-			style += "display:none;";
+    getLight: function(item) {
+        if (this.config.lights.hasOwnProperty(item)) {
+            return this.config.lights[item];
+        }
+        return null;
+    },
+    getDoor: function(item) {
+        if (this.config.doors.hasOwnProperty(item)) {
+            return this.config.doors[item];
+        }
+        return null;
+    },
+	setVisible: function(id, config, on) {
+        if (!id) {
+            return;
         }
 
-		var div = document.createElement("div");
-		div.id = 'hass.' + item;
-		div.style.cssText = style;
-		return div;
-	},
-
-	appendDoors: function(floorplan) {
-		for (var item in this.config.doors) {
-			var config = this.config.doors[item];
-			floorplan.appendChild(this.getDoorDiv(item, config));
-		}
-	},
-    getDoorDiv: function(item, position) {
-		var style = "left:" + position.left + "px;top:" + position.top + "px;position:absolute;"
-			+ "height:" + this.config.door.height + "px;width:" + this.config.door.width + "px;"
-            + "-webkit-mask-image:url(" + this.file("/images/" + this.config.door.image) + ");-webkit-mask-size: cover;"
-            + "mask-image:url(" + this.file("/images/" + this.config.door.image) + ");mask-size: cover;"
-            + "background-color:" + this.config.door.color + ";";
-		if (!this.config.draft) {
-			style += "display:none;";
+        var doc = document.getElementById("floorplan").getSVGDocument();
+		var element = doc.getElementById(id);
+		if (element == null) {
+            return;
         }
-
-		var div = document.createElement("div");
-		div.id = 'hass.' + item;
-		div.style.cssText = style;
-		return div;
-	},
+        if (!on) {
+            element.removeAttribute("style");
+            return;
+        }
+        element.style.fill = config.color;
+        element.style.stroke = config.stroke;
+	}
 });
