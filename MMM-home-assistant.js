@@ -86,8 +86,8 @@ Module.register("MMM-home-assistant", {
 
         var self = this;
         setTimeout(function(){
-            if (!this.config.draft) {
-                this.updateAllStates();
+            if (!self.config.draft) {
+                self.updateAllStates();
             } else {
                 for (l in self.config.lights) {
                     self.updateState(l, "on");
