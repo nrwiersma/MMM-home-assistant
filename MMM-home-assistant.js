@@ -84,19 +84,19 @@ Module.register("MMM-home-assistant", {
         obj.src = this.file("/images/" + this.config.floorplan.image);
         floorplan.appendChild(obj);
 
-        if (!this.config.draft) {
-            this.updateAllStates();
-        } else {
-            var self = this;
-            setTimeout(function(){
+        var self = this;
+        setTimeout(function(){
+            if (!this.config.draft) {
+                this.updateAllStates();
+            } else {
                 for (l in self.config.lights) {
                     self.updateState(l, "on");
                 }
                 for (d in self.config.doors) {
                     self.updateState(d, "on");
                 }
-            }, 1000);
-        }
+            }
+        }, 1000);
 
         return floorplan;
 	},
