@@ -1,4 +1,5 @@
 Module.register("MMM-home-assistant", {
+    conn: null,
     defaults: {
 		updateInterval: 60 * 60 * 1000,
         draft: false,
@@ -44,15 +45,36 @@ Module.register("MMM-home-assistant", {
             return;
 		}
 
+        this.connect();
+
+		if (!isNaN(this.config.updateInterval) && this.config.updateInterval > 0) {
+            setInterval(function() {
+                self.updateAllStates();
+
+                if (!this.conn || this.conn.readyState != 1) {
+                    this.connect();
+                }
+            }, this.config.updateInterval);
+		}
+	},
+
+    connect: function() {
+        var self = this;
+
+        if (this.conn) {
+            this.conn.close();
+            this.conn = null;
+        }
+
         var EventSource = EventSourcePolyfill;
-        var source = new EventSource("http://" + this.config.homeAssistant.addr + "/api/stream", {
+        this.conn = new EventSource("http://" + this.config.homeAssistant.addr + "/api/stream", {
     		headers: {
                 Authorization: "Bearer " + this.config.homeAssistant.token,
                 "Content-Type": "application/json"
             },
             withCredentials: false
         });
-        source.onmessage = function(event) {
+        this.conn.onmessage = function(event) {
             if (event.data == "ping") {
                 return;
             }
@@ -65,18 +87,11 @@ Module.register("MMM-home-assistant", {
             var state = obj.data.new_state;
             self.updateState(state.entity_id, state.state);
         };
-
-		if (!isNaN(this.config.updateInterval) && this.config.updateInterval > 0) {
-            setInterval(function() {
-                self.updateAllStates();
-            }, this.config.updateInterval);
-		}
-	},
+    },
 
     getDom: function() {
 		var floorplan = document.createElement("div");
-		floorplan.style.cssText = ""//"background-image:url(" + this.file("/images/" + this.config.floorplan.image) + ");"
-			+ "top:-" + this.config.floorplan.height + "px;width:" + this.config.floorplan.width + "px;height:" + this.config.floorplan.height + "px;";
+		floorplan.style.cssText = "top:-" + this.config.floorplan.height + "px;width:" + this.config.floorplan.width + "px;height:" + this.config.floorplan.height + "px;";
 
         var obj = document.createElement("embed");
         obj.id = "floorplan";
@@ -124,10 +139,9 @@ Module.register("MMM-home-assistant", {
     },
 	updateState: function(item, state) {
         var visible = state == "on";
-        var id;
         var config;
 
-        id = this.getLight(item);
+        var id = this.getLight(item);
         if (id) {
             config = this.config.light;
         } else {
