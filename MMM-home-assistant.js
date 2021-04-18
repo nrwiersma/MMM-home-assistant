@@ -138,7 +138,7 @@ Module.register("MMM-home-assistant", {
 		req.send();
     },
 	updateState: function(item, state) {
-        var visible = state == "on";
+        var visible = state == "on" || state == "open";
         var config;
 
         var id = this.getLight(item);
